@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   session: { type: String },
   phone: { type: String, unique: true },
   name: { type: String, required: true },
+  groupsCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   role: { type: String, default: "admin", enum: ["admin", "owner"] },
 });

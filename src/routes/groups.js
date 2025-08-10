@@ -3,6 +3,7 @@ const apiHash = process.env.API_HASH;
 const apiId = Number(process.env.API_ID);
 
 // Models
+const User = require("../models/User");
 const Group = require("../models/Group");
 
 // Server
@@ -72,10 +73,88 @@ router.post("/update", authMiddleware, async (req, res) => {
       await Group.insertMany(groups);
     }
 
+    await User.findByIdAndUpdate(userId, { groupsCount: groups.length });
+
     res.send({ ok: true, totalGroups: groups.length });
   } catch (err) {
     console.error("Group update error:", err);
     res.status(500).send({ error: "Serverda ichki xatolik" });
+  }
+});
+
+// Get all groups
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const { cursor, limit = 20 } = req.query;
+    const limitNum = parseInt(limit);
+
+    // Build query based on cursor
+    let query = {};
+    if (cursor) {
+      query._id = { $lt: cursor }; // get records older than cursor
+    }
+
+    // Fetch groups with pagination
+    const groups = await Group.find(query)
+      .sort({ _id: -1 }) // sort by newest first
+      .limit(limitNum + 1); // fetch one extra to check if more data exists
+
+    // Check if there are more records
+    const hasMore = groups.length > limitNum;
+    const groupsToReturn = hasMore ? groups.slice(0, limitNum) : groups;
+
+    // Get next cursor (last item's _id)
+    const nextCursor =
+      groupsToReturn.length > 0
+        ? groupsToReturn[groupsToReturn.length - 1]._id
+        : null;
+
+    res.json({
+      success: true,
+      data: groupsToReturn,
+      pagination: {
+        hasMore,
+        nextCursor,
+        limit: limitNum,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching groups",
+    });
+  }
+});
+
+// Get user groups
+router.get("/user/:userId", authMiddleware, async (req, res) => {
+  const { userId } = req.params;
+  const page = parseInt(req.query.page || "1", 10);
+  const limit = parseInt(req.query.limit || "20", 10);
+
+  if (!userId) {
+    return res.status(404).send({ error: "Foydalanuvchi ID mavjud emas" });
+  }
+
+  try {
+    const groups = await Group.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const total = await Group.countDocuments({ userId });
+
+    res.json({
+      page,
+      total,
+      groups,
+      ok: true,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error("Error fetching user groups:", error);
+    res.status(500).json({ error: "Serverda ichki xatolik" });
   }
 });
 

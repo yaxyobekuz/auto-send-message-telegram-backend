@@ -36,26 +36,30 @@ const getUserGroups = async ({ session, userId }) => {
     const dialogs = await client.getDialogs({ offsetId, limit });
     if (!dialogs.length) break;
 
-    dialogs.forEach(({ entity }) => {
-      const id = String(entity.id);
+    for (const dialog of dialogs) {
+      const entity = dialog.entity;
+      if (!entity) continue;
+
       const isGroup = entity.className === "Chat";
       const isSupergroup = entity.className === "Channel" && entity.megagroup;
 
-      if ((!isGroup && !isSupergroup) || seen.has(id)) return;
+      if ((!isGroup && !isSupergroup) || seen.has(entity.id.toString()))
+        continue;
 
-      seen.add(id);
+      seen.add(entity.id.toString());
 
       groups.push({
         userId,
-        chatId: String(entity.id),
         className: entity.className,
-        title: entity.title || "Mavjud emas!",
+        chatId: entity.id.toString(),
+        title: entity.title || "Noma'lum guruh",
         type: isSupergroup ? "supergroup" : "group",
         accessHash: entity.accessHash?.toString() || null,
       });
-    });
+    }
 
-    offsetId = dialogs[dialogs.length - 1].id;
+    // Xabar ID bo‘lishi kerak, chat ID emas!
+    offsetId = dialogs[dialogs.length - 1].message?.id || 0;
     if (dialogs.length < limit) break;
   }
 

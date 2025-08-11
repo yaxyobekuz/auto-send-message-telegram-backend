@@ -171,7 +171,10 @@ router.put("/message/:messageId", authMiddleware, async (req, res) => {
       res.status(404).json({ error: "Xabar topilmadi" });
     }
 
-    res.json({ message, ok: true });
+    res.json({
+      ok: true,
+      message: { ...message.toObject(), name, time, messages },
+    });
   } catch (error) {
     console.error("Error updating message: ", error);
     res.status(500).json({ error: "Serverda ichki xatolik" });

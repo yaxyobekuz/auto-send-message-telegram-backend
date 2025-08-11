@@ -17,6 +17,9 @@ const { StringSession } = require("telegram/sessions");
 // Middleware
 const authMiddleware = require("../middleware/auth.middleware");
 
+// Delay helper
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
 const getUserGroups = async ({ session, userId }) => {
   const client = new TelegramClient(
     new StringSession(session),
@@ -28,7 +31,7 @@ const getUserGroups = async ({ session, userId }) => {
   await client.connect();
 
   let offsetId = 0;
-  const limit = 100;
+  const limit = 50;
   const groups = [];
   const seen = new Set();
 
@@ -58,9 +61,10 @@ const getUserGroups = async ({ session, userId }) => {
       });
     }
 
-    // Xabar ID bo‘lishi kerak, chat ID emas!
     offsetId = dialogs[dialogs.length - 1].message?.id || 0;
     if (dialogs.length < limit) break;
+
+    await delay(2000);
   }
 
   await client.disconnect();

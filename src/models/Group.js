@@ -1,10 +1,12 @@
 const mongoose = require("mongoose");
 
 const groupSchema = new mongoose.Schema({
+  className: { type: String },
   userId: { type: String, required: true },
+  chatId: { type: String, required: true },
+  accessHash: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
   title: { type: String, default: "Mavjud emas" },
-  chatId: { type: String, unique: true, required: true },
   type: { type: String, default: "group", enum: ["group", "supergroup"] },
 });
 

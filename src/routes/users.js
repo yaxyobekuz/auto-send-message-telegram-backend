@@ -10,188 +10,101 @@ const authMiddleware = require("../middleware/auth.middleware");
 
 // Get all users
 router.get("/", authMiddleware, async (req, res) => {
-  try {
-    const users = await User.find().select("-token -session");
+  const user = req.user;
+  const page = parseInt(req.query.page || "1", 10);
+  const limit = parseInt(req.query.limit || "20", 10);
 
-    res.json({
-      success: true,
-      data: users,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch users",
-      error: error.message,
-    });
+  if (user.role !== "owner") {
+    return res
+      .status(400)
+      .json({ error: "Foydalanuvchilarni olish uchun ega huquqi kerak" });
   }
-});
 
-// Get user by ID
-router.get("/:id", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-token -session");
+    const users = await User.find()
+      .select("-token -session")
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    const total = await User.countDocuments();
 
     res.json({
-      success: true,
-      data: user,
+      page,
+      total,
+      users,
+      ok: true,
+      pages: Math.ceil(total / limit),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch user",
-      error: error.message,
-    });
+    res.status(500).json({ error: "Serverd ichki xatolik" });
   }
 });
 
 // Create new user
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/user/new", authMiddleware, async (req, res) => {
+  const user = req.user;
+
+  if (user.role !== "owner") {
+    return res
+      .status(400)
+      .json({ error: "Foydalanuvchini qo'shish uchun ega huquqi kerak" });
+  }
+
   try {
-    const { phone, name, role = "admin" } = req.body;
+    const { phone, name = "Admin" } = req.body;
 
     // Check required fields
-    if (!phone || !name) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone and name are required",
-      });
+    if (!phone) {
+      return res.status(400).json({ error: "Telefon raqam mavjud emas" });
     }
 
     // Check if phone already exists
     const existingUser = await User.findOne({ phone });
+
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "User with this phone already exists",
-      });
+      return res
+        .status(400)
+        .json({ error: "Foydalanuvchi allaqachon qo'shilgan" });
     }
 
-    const newUser = new User({
-      phone,
-      name,
-      role,
-    });
-
-    const savedUser = await newUser.save();
+    const newUser = await User.create({ phone, name });
 
     // Remove sensitive data from response
-    const userResponse = savedUser.toObject();
+    const userResponse = newUser.toObject();
     delete userResponse.token;
     delete userResponse.session;
 
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      data: userResponse,
-    });
+    res.status(201).json({ ok: true, user: userResponse });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create user",
-      error: error.message,
-    });
-  }
-});
-
-// Update user
-router.put("/:id", authMiddleware, async (req, res) => {
-  try {
-    const { name, role, groupsCount } = req.body;
-    const updateData = {};
-
-    // Only update provided fields
-    if (name) updateData.name = name;
-    if (role) updateData.role = role;
-    if (groupsCount !== undefined) updateData.groupsCount = groupsCount;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select("-token -session");
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "User updated successfully",
-      data: updatedUser,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update user",
-      error: error.message,
-    });
+    res.status(500).json({ error: "Serverda ichki xatolik" });
   }
 });
 
 // Delete user
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/user/:userId", authMiddleware, async (req, res) => {
+  const user = req.user;
+  const userId = req.params.userId;
+
+  if (user.role !== "owner") {
+    return res
+      .status(400)
+      .json({ error: "Foydalanuvchini o'chirish uchun ega huquqi kerak" });
+  }
+
+  if (!userId) {
+    return res.status(400).json({ error: "Foydalanuvchini ID mavjud emas" });
+  }
+
   try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    const deletedUser = await User.findByIdAndDelete(userId);
 
     if (!deletedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
     }
 
-    res.json({
-      success: true,
-      message: "User deleted successfully",
-    });
+    res.json({ ok: true, message: "Foydalanuvchi o'chirildi" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete user",
-      error: error.message,
-    });
-  }
-});
-
-// Update user session
-router.patch("/:id/session", authMiddleware, async (req, res) => {
-  try {
-    const { session } = req.body;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { session },
-      { new: true }
-    ).select("-token -session");
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "User session updated successfully",
-      data: updatedUser,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update session",
-      error: error.message,
-    });
+    res.status(500).json({ error: "Serverda ichki xatolik" });
   }
 });
 

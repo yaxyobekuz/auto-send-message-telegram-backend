@@ -47,9 +47,11 @@ const getUserGroups = async ({ session, userId }) => {
 
       groups.push({
         userId,
-        chatId: id,
+        chatId: String(entity.id),
+        className: entity.className,
         title: entity.title || "Mavjud emas!",
         type: isSupergroup ? "supergroup" : "group",
+        accessHash: entity.accessHash?.toString() || null,
       });
     });
 
@@ -69,9 +71,7 @@ router.post("/update", authMiddleware, async (req, res) => {
 
     await Group.deleteMany({ userId });
 
-    if (groups.length > 0) {
-      await Group.insertMany(groups);
-    }
+    if (groups.length > 0) await Group.insertMany(groups);
 
     await User.findByIdAndUpdate(userId, { groupsCount: groups.length });
 

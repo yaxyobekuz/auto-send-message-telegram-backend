@@ -1,12 +1,12 @@
 // Models
 const Message = require("../models/Message");
 
-// Server
-const { express } = require("../start/server");
-const router = express.Router();
-
 // Middleware
 const authMiddleware = require("../middleware/auth.middleware");
+
+// Server
+const { express, messageScheduler } = require("../start/server");
+const router = express.Router();
 
 // Get all messages
 router.get("/", authMiddleware, async (req, res) => {
@@ -80,21 +80,23 @@ router.post("/new", authMiddleware, async (req, res) => {
   }
 
   try {
-    const message = await Message.create({
+    const newMessage = await Message.create({
       name,
       time,
       messages,
       userId: user._id,
     });
 
-    res.status(201).json({ message, ok: true });
+    await messageScheduler.addScheduledMessage(newMessage);
+
+    res.status(201).json({ message: newMessage, ok: true });
   } catch (error) {
     console.error("Error creating message: ", error);
     res.status(500).json({ error: "Serverda ichki xatolik" });
   }
 });
 
-// Delete message
+// Delete user message
 router.delete("/message/:messageId", authMiddleware, async (req, res) => {
   const user = req.user;
   const messageId = req.params.messageId;
@@ -112,6 +114,8 @@ router.delete("/message/:messageId", authMiddleware, async (req, res) => {
     if (!message) {
       res.status(404).json({ error: "Xabar topilmadi" });
     }
+
+    await messageScheduler.removeScheduledMessage(messageId);
 
     res.json({ message, ok: true });
   } catch (error) {
@@ -162,19 +166,19 @@ router.put("/message/:messageId", authMiddleware, async (req, res) => {
   }
 
   try {
-    const message = await Message.findOneAndUpdate(
+    const updatedMessage = await Message.findOneAndUpdate(
       { userId, _id: messageId },
-      { name, time, messages }
+      { name, time, messages },
+      { new: true }
     );
 
-    if (!message) {
-      res.status(404).json({ error: "Xabar topilmadi" });
+    if (!updatedMessage) {
+      return res.status(404).json({ error: "Xabar topilmadi" });
     }
 
-    res.json({
-      ok: true,
-      message: { ...message.toObject(), name, time, messages },
-    });
+    await messageScheduler.updateScheduledMessage(updatedMessage);
+
+    res.json({ ok: true, message: updatedMessage });
   } catch (error) {
     console.error("Error updating message: ", error);
     res.status(500).json({ error: "Serverda ichki xatolik" });

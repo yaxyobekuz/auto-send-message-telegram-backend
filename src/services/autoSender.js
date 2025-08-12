@@ -94,7 +94,7 @@ class MessageScheduler {
       // Initialize Telegram client
       const client = await this.initializeTelegramClient(user.session);
 
-      async function sendWithDelay(client, groups, messages, delayMs) {
+      const sendWithDelay = async (client, groups, messages, delayMs) => {
         const results = [];
         for (const group of groups) {
           const randomMessage = this.selectRandomMessage(messages);
@@ -107,7 +107,7 @@ class MessageScheduler {
           await delay(delayMs);
         }
         return results;
-      }
+      };
 
       const results = await sendWithDelay(client, userGroups, messages, 2000);
 

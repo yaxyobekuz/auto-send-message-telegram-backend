@@ -30,13 +30,21 @@ const getUserGroups = async ({ session, userId }) => {
 
   await client.connect();
 
+  let total = 0;
   let offsetId = 0;
-  const limit = 150;
+  const limit = 300;
   const groups = [];
   const seen = new Set();
 
   while (true) {
     const dialogs = await client.getDialogs({ offsetId, limit });
+
+    total = total + dialogs.length;
+
+    console.log(
+      `${total} ta dialogdan ${groups.length} ta gruppa. Hozirgi dialoglar ${dialogs.length} ta`
+    );
+
     if (!dialogs.length) break;
 
     for (const dialog of dialogs) {

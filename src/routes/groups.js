@@ -31,7 +31,7 @@ const getUserGroups = async ({ session, userId }) => {
   await client.connect();
 
   let offsetId = 0;
-  const limit = 50;
+  const limit = 150;
   const groups = [];
   const seen = new Set();
 
@@ -64,7 +64,7 @@ const getUserGroups = async ({ session, userId }) => {
     offsetId = dialogs[dialogs.length - 1].message?.id || 0;
     if (dialogs.length < limit) break;
 
-    await delay(2000);
+    await delay(15000);
   }
 
   await client.disconnect();

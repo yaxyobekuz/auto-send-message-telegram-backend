@@ -94,16 +94,16 @@ class MessageScheduler {
       // Initialize Telegram client
       const client = await this.initializeTelegramClient(user.session);
 
-      const sendPromises = userGroups.map(async (group) => {
-        // Select random message
+      for (const group of userGroups) {
+        // Random message
         const randomMessage = this.selectRandomMessage(messages);
 
-        // Sleep for anit flood wait
-        await delay(2000);
+        // Send
+        await this.sendToGroup(client, group, randomMessage);
 
-        // Send to all groups
-        return this.sendToGroup(client, group, randomMessage);
-      });
+        // Delay to avoid flood wait
+        await delay(2000);
+      }
 
       const results = await Promise.allSettled(sendPromises);
 

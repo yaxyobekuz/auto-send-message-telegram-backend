@@ -10,6 +10,9 @@ const User = require("../models/User");
 const Group = require("../models/Group");
 const Message = require("../models/Message");
 
+// Helpers
+const { delay } = require("../utils/helpers");
+
 // Telegram
 const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
@@ -85,20 +88,22 @@ class MessageScheduler {
       // Get user groups
       const userGroups = await Group.find({ userId: userId });
       if (userGroups.length === 0) {
-        console.log(`No groups found for user ${userId}`);
-        return;
+        return console.log(`No groups found for user ${userId}`);
       }
 
       // Initialize Telegram client
       const client = await this.initializeTelegramClient(user.session);
 
-      // Select random message
-      const randomMessage = this.selectRandomMessage(messages);
+      const sendPromises = userGroups.map(async (group) => {
+        // Select random message
+        const randomMessage = this.selectRandomMessage(messages);
 
-      // Send to all groups
-      const sendPromises = userGroups.map((group) =>
-        this.sendToGroup(client, group, randomMessage)
-      );
+        // Sleep for anit flood wait
+        await delay(2000);
+
+        // Send to all groups
+        return this.sendToGroup(client, group, randomMessage);
+      });
 
       const results = await Promise.allSettled(sendPromises);
 

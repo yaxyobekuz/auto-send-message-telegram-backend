@@ -6,6 +6,9 @@ const apiId = Number(process.env.API_ID);
 const User = require("../models/User");
 const Group = require("../models/Group");
 
+// Helpers
+const { delay } = require("../utils/helpers");
+
 // Server
 const { express } = require("../start/server");
 const router = express.Router();
@@ -16,9 +19,6 @@ const { StringSession } = require("telegram/sessions");
 
 // Middleware
 const authMiddleware = require("../middleware/auth.middleware");
-
-// Delay helper
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 const getUserGroups = async ({ session, userId }) => {
   const client = new TelegramClient(

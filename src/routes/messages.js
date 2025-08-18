@@ -1,4 +1,5 @@
 // Models
+const Freeze = require("../models/Freeze");
 const Message = require("../models/Message");
 
 // Middleware
@@ -64,7 +65,7 @@ router.get("/user/:userId", authMiddleware, async (req, res) => {
 
 // Add new message
 router.post("/new", authMiddleware, async (req, res) => {
-  const user = req.user;
+  const userId = req.user._id;
   const { messages, name, time } = req.body;
 
   if (!time) {
@@ -80,14 +81,12 @@ router.post("/new", authMiddleware, async (req, res) => {
   }
 
   try {
-    const newMessage = await Message.create({
-      name,
-      time,
-      messages,
-      userId: user._id,
-    });
+    const isFreezed = await Freeze.findOne({ userId });
+    const newMessage = await Message.create({ name, time, userId, messages });
 
-    await messageScheduler.addScheduledMessage(newMessage);
+    if (!isFreezed) {
+      await messageScheduler.addScheduledMessage(newMessage);
+    }
 
     res.status(201).json({ message: newMessage, ok: true });
   } catch (error) {

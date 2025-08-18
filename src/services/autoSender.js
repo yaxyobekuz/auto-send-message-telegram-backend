@@ -8,6 +8,7 @@ const apiId = Number(process.env.API_ID);
 // Models
 const User = require("../models/User");
 const Group = require("../models/Group");
+const Freeze = require("../models/Freeze");
 const Message = require("../models/Message");
 
 // Helpers
@@ -27,7 +28,10 @@ class MessageScheduler {
   // Initialize scheduler on app start
   async initializeScheduler() {
     try {
-      const messages = await Message.find({});
+      const ids = await Freeze.distinct("userId");
+      const messages = await Message.find(
+        ids.length ? { userId: { $nin: ids } } : {}
+      );
 
       for (const message of messages) {
         this.scheduleMessage(message);

@@ -41,9 +41,9 @@ router.post("/freeze", authMiddleware, async (req, res) => {
 
     const messages = await Message.find({ userId });
 
-    messages.forEach((message) => {
-      messageScheduler.removeScheduledMessage(message._id);
-    });
+    for (let message of messages) {
+      await messageScheduler.removeScheduledMessage(message._id);
+    }
 
     await Freeze.create({ userId });
 
@@ -66,9 +66,9 @@ router.delete("/freeze", authMiddleware, async (req, res) => {
 
     const messages = await Message.find({ userId });
 
-    messages.forEach((message) => {
-      messageScheduler.addScheduledMessage(message._id);
-    });
+    for (let message of messages) {
+      await messageScheduler.addScheduledMessage(message._id);
+    }
 
     res.json({ ok: true, message: "Freeze olib tashlandi" });
   } catch (error) {

@@ -165,6 +165,7 @@ router.put("/message/:messageId", authMiddleware, async (req, res) => {
   }
 
   try {
+    const isFreezed = await Freeze.findOne({ userId });
     const updatedMessage = await Message.findOneAndUpdate(
       { userId, _id: messageId },
       { name, time, messages },
@@ -175,7 +176,9 @@ router.put("/message/:messageId", authMiddleware, async (req, res) => {
       return res.status(404).json({ error: "Xabar topilmadi" });
     }
 
-    await messageScheduler.updateScheduledMessage(updatedMessage);
+    if (!isFreezed) {
+      await messageScheduler.updateScheduledMessage(updatedMessage);
+    }
 
     res.json({ ok: true, message: updatedMessage });
   } catch (error) {

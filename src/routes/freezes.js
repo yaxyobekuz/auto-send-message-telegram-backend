@@ -67,7 +67,7 @@ router.delete("/freeze", authMiddleware, async (req, res) => {
     const messages = await Message.find({ userId });
 
     for (let message of messages) {
-      await messageScheduler.addScheduledMessage(message._id);
+      await messageScheduler.addScheduledMessage(message);
     }
 
     res.json({ ok: true, message: "Freeze olib tashlandi" });

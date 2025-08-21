@@ -41,11 +41,10 @@ const getUserGroups = async ({ session, userId }) => {
 
     total = total + dialogs.length;
 
-    console.log(
-      `${total} ta dialogdan ${groups.length} ta gruppa. Hozirgi dialoglar ${dialogs.length} ta`
-    );
-
-    if (!dialogs.length) break;
+    if (!dialogs.length) {
+      console.log("Dialoglar topilmadi");
+      break;
+    }
 
     for (const dialog of dialogs) {
       const entity = dialog.entity;
@@ -68,6 +67,10 @@ const getUserGroups = async ({ session, userId }) => {
         accessHash: entity.accessHash?.toString() || null,
       });
     }
+
+    console.log(
+      `${total} ta dialogdan ${groups.length} ta gruppa. Hozirgi dialoglar ${dialogs.length} ta`
+    );
 
     offsetId = dialogs[dialogs.length - 1].message?.id || 0;
     if (dialogs.length < limit) break;

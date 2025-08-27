@@ -4,6 +4,8 @@ const router = express.Router();
 
 // Models
 const User = require("../models/User");
+const Group = require("../models/Group");
+const Message = require("../models/Message");
 
 // Middleware
 const authMiddleware = require("../middleware/auth.middleware");
@@ -83,16 +85,16 @@ router.post("/user/new", authMiddleware, async (req, res) => {
 // Delete user
 router.delete("/user/:userId", authMiddleware, async (req, res) => {
   const user = req.user;
-  const userId = req.params.userId;
+  const { userId } = req.params;
 
   if (user.role !== "owner") {
     return res
-      .status(400)
+      .status(403)
       .json({ error: "Foydalanuvchini o'chirish uchun ega huquqi kerak" });
   }
 
-  if (!userId) {
-    return res.status(400).json({ error: "Foydalanuvchini ID mavjud emas" });
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Noto'g'ri foydalanuvchi ID" });
   }
 
   try {
@@ -101,6 +103,16 @@ router.delete("/user/:userId", authMiddleware, async (req, res) => {
     if (!deletedUser) {
       return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
     }
+
+    const messages = await Message.find({ userId });
+    await Promise.all(
+      messages.map((msg) => messageScheduler.removeScheduledMessage(msg._id))
+    );
+
+    await Promise.all([
+      Group.deleteMany({ userId }),
+      Message.deleteMany({ userId }),
+    ]);
 
     res.json({ ok: true, message: "Foydalanuvchi o'chirildi" });
   } catch (error) {

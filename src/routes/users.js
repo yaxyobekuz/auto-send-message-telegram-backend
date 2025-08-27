@@ -93,10 +93,6 @@ router.delete("/user/:userId", authMiddleware, async (req, res) => {
       .json({ error: "Foydalanuvchini o'chirish uchun ega huquqi kerak" });
   }
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: "Noto'g'ri foydalanuvchi ID" });
-  }
-
   try {
     const deletedUser = await User.findByIdAndDelete(userId);
 

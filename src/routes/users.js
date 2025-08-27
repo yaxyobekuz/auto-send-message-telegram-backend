@@ -101,14 +101,13 @@ router.delete("/user/:userId", authMiddleware, async (req, res) => {
     }
 
     const messages = await Message.find({ userId });
-    await Promise.all(
-      messages.map((msg) => messageScheduler.removeScheduledMessage(msg._id))
-    );
 
-    await Promise.all([
-      Group.deleteMany({ userId }),
-      Message.deleteMany({ userId }),
-    ]);
+    for (let message of messages) {
+      await messageScheduler.removeScheduledMessage(message._id);
+    }
+
+    await Group.deleteMany({ userId });
+    await Message.deleteMany({ userId });
 
     res.json({ ok: true, message: "Foydalanuvchi o'chirildi" });
   } catch (error) {

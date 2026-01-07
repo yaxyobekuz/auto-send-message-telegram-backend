@@ -80,6 +80,7 @@ class MessageScheduler {
 
   // Main function to send messages to all user groups
   async sendMessageToGroups(messageData) {
+    let client = null;
     try {
       const { userId, messages } = messageData;
 
@@ -96,7 +97,7 @@ class MessageScheduler {
       }
 
       // Initialize Telegram client
-      const client = await this.initializeTelegramClient(user.session);
+      client = await this.initializeTelegramClient(user.session);
 
       const sendWithDelay = async (client, groups, messages, delayMs) => {
         const results = [];
@@ -123,10 +124,27 @@ class MessageScheduler {
         `Message sent to ${successful} groups, ${failed} failed for user ${userId}`
       );
 
-      // Disconnect client
-      await client.disconnect();
+      // Disconnect client properly
+      if (client) {
+        try {
+          await client.disconnect();
+          await client.destroy(); // Clientni to'liq yopish
+        } catch (err) {
+          console.error("Error disconnecting client:", err);
+        }
+      }
     } catch (error) {
       console.error("Error in sendMessageToGroups:", error);
+    } finally {
+      // Har doim clientni yopish
+      if (client) {
+        try {
+          await client.disconnect();
+          await client.destroy();
+        } catch (err) {
+          console.error("Error in finally disconnecting client:", err);
+        }
+      }
     }
   }
 
@@ -135,6 +153,10 @@ class MessageScheduler {
     const session = new StringSession(sessionString);
     const client = new TelegramClient(session, apiId, apiHash, {
       connectionRetries: 5,
+      useWSS: true,
+      requestRetries: 3,
+      timeout: 30000,
+      autoReconnect: false, // Muhim: auto reconnect o'chirildi
     });
 
     await client.connect();
